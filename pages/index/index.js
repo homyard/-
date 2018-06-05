@@ -9,6 +9,9 @@ const weatherMap = {
   'heavyrain': '大雨',
   'snow': '雪'
 }
+
+const QQMapWX = require('../../libs/qqmap-wx-jssdk.js');
+
 const weatherColorMap = {
   'sunny': '#cbeefd',
   'cloudy': '#deeef6',
@@ -25,7 +28,10 @@ Page({
     nowWeatherBackground: "",
     hourlyWeather: [],
     todayTemp:"",
-    todayDate:""
+    todayDate:"",
+    city:"广州市",
+    locationtipstext:"点击获取当前位置"
+    
   },
   onPullDownRefresh(){
     this.getNow(()=>{
@@ -33,13 +39,16 @@ Page({
     })
   },
   onLoad(){
+    this.qqmapsdk = new QQMapWX({
+      key: 'NAZBZ-ZDSCQ-4XC5B-GKJZ3-KEHPQ-ZRBYZ'
+    })
     this.getNow()
   },
   getNow(callback) {
     wx.request({
       url: 'https://test-miniprogram.com/api/weather/now',
       data: {
-        city: '广州市'
+        city: 'this.data.city'
       },
       success: res => {
         console.log(res)
@@ -96,7 +105,26 @@ setNow(result){
     wx.navigateTo({
       url: '/pages/list/list'
     })
+  },
+  onTapLocation() {
+    wx.getLocation({
+      success: res => {
+        this.qqmapsdk.reverseGeocoder({
+          location: {
+            latitude: res.latitude,
+            longitude: res.longitude
+          },
+          success: res => {
+            let city = res.result.address_component.city
+            this.setData({
+              city:city,
+              locationtipstext:""
+            })
+            this.getNow()
+          }
+        });
+      }
+    })
   }
-
 
 })
