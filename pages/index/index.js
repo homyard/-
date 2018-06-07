@@ -21,6 +21,11 @@ const weatherColorMap = {
   'snow': '#aae1fc'
 }
 
+const UNPROMPTED = 0
+const UNAUTHORIZED = 1
+const AUTHORIZED = 2
+
+
 Page({
   data: {
     nowTemp: '11°',
@@ -30,7 +35,7 @@ Page({
     todayTemp:"",
     todayDate:"",
     city:"广州市",
-    locationtipstext:"点击获取当前位置"
+    locationAuthType: UNPROMPTED
     
   },
   onPullDownRefresh(){
@@ -41,6 +46,19 @@ Page({
   onLoad(){
     this.qqmapsdk = new QQMapWX({
       key: 'NAZBZ-ZDSCQ-4XC5B-GKJZ3-KEHPQ-ZRBYZ'
+    })
+    wx.getSetting({
+      success: res=>{
+       let auth = res.authSetting['scope.userLocation']
+       this.setData({
+         locationAuthType : auth? AUTHORIZED:
+         (auth===false)?UNAUTHORIZED:UNPROMPTED,
+       })
+       if (auth)
+         this.getCityAndWeather()
+       else
+         this.getNow()
+      }
     })
     this.getNow()
   },
@@ -103,12 +121,28 @@ setNow(result){
 
   onTapDayWeather() {
     wx.navigateTo({
-      url: '/pages/list/list'
+      url: '/pages/list/list?city=' + this.data.city
     })
   },
   onTapLocation() {
+    if (this.data.locationAuthType === UNAUTHORIZED)
+    wx.openSetting({
+      success: res => {
+        let auth = res.authSetting["scope.userLocation"]
+        if (auth) {
+          this.getCityAndWeather()
+        }
+      }
+    })
+    else
+      this.getCityAndWeather()
+    },
+    getCityAndWeather(){
     wx.getLocation({
       success: res => {
+        this.setData({
+          locationAuthType: AUTHORIZED,
+        })
         this.qqmapsdk.reverseGeocoder({
           location: {
             latitude: res.latitude,
@@ -123,6 +157,11 @@ setNow(result){
             this.getNow()
           }
         });
+      },
+      fail: () =>{
+        this.setData({
+          locationAuthType: UNAUTHORIZED,
+        })
       }
     })
   }
